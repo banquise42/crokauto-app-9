@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CrokAuto</title>
+
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+
+<style>
+body{margin:0;background:#0b0b0b;color:#fff;font-family:-apple-system,Arial}
+.top{
+position:sticky;
+top:0;
+background:#ff7a00;
+color:#000;
+padding:12px;
+text-align:center;
+font-weight:bold;
+font-size:20px;
+box-shadow:0 5px 15px rgba(0,0,0,.5)
+}
+.wrap{max-width:520px;margin:auto;padding:10px}
+
+.card{background:#151515;border-radius:18px;padding:15px;margin-top:10px;box-shadow:0 10px 25px rgba(0,0,0,.5)}
+.label{color:#aaa;font-size:13px}
+.value{font-size:28px;font-weight:bold}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:none;border-radius:16px;padding:16px;font-size:18px;font-weight:bold;cursor:pointer}
+.green{background:#2DF006;color:#000}
+.red{background:#c0392b;color:#fff}
+.orange{background:#ff7a00;color:#000}
+.blue{background:#2980b9;color:#fff}
+.purple{background:#C472CC;color:#000}
+.gold{background:#FFD700;color:#000}
+.gray{background:#333;color:#fff}
+
+.tabs{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:8px;
+margin-top:10px;
+}
+
+.tab{
+height:42px;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:14px;
+background:#222;
+font-weight:bold;
+cursor:pointer;
+font-size:14px;
+}
+
+.tab.active{background:#ff7a00;color:#000}
+
+.hidden{display:none !important}
+#editor{display:none}
+#editor.show{display:flex !important}
+input{width:100%;padding:12px;border-radius:12px;border:none;font-size:18px;margin-top:6px}
+.small{font-size:13px;color:#aaa;margin-top:6px}
+.dot{
+width:10px;
+height:10px;
+border-radius:50%;
+display:inline-block;
+margin-right:6px;
+background:transparent;
+}
+.dot.on{background:#2DF006;}
+</style>
+</head>
+
+<body>
+<div class="top">🐾 CrokAuto 🐾</div>
+  
+<div id="offlineBanner" style="
+display:none;
+background:#c0392b;
+color:white;
+text-align:center;
+padding:8px;
+font-weight:bold;
+">
+⚠️ Appareil hors ligne
+</div>
+<div class="wrap">
+
+<div class="tabs">
+  <div id="tabHome" class="tab active" onclick="showTab('home')">🏠 Accueil</div>
+  <div id="tabSettings" class="tab" onclick="showTab('settings')">⚙️ Paramètres</div>
+</div>
+
+<!-- ================= ACCUEIL ================= -->
+<div id="homePanel">
+
+  <div class="card">
+    <div class="label">État</div>
+    <div class="value" id="status">---</div>
+
+    <div class="label">Poids réserve</div>
+    <div class="value"><span id="weight">0</span> g</div>
+
+    <div class="label">Ration cible</div>
+    <div class="value"><span id="target">0</span> g</div>
+  </div>
+
+  <div class="card">
+    <button class="btn blue" onclick="toggleAuto()" style="width:100%">
+      <span id="autoDot" class="dot"></span>
+      🤖 Distribution Auto
+    </button>
+  </div>
+
+  <div class="card grid">
+    <button class="btn green" onclick="cmd('dist')">🍽 Distribution</button>
+    <button class="btn red" onclick="cmd('stop')">⛔ STOP</button>
+    <button class="btn purple" onclick="showHistory()">📜 Historique</button>
+    <button id="lampBtn" class="btn gold" onclick="toggleLamp()">
+      <span id="lampDot" class="dot"></span>💡 Lampe
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="label">Définir poids de la ration</div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <input id="setg" type="number" style="width:70px;text-align:center">
+      <div class="small">grammes</div>
+    </div>
+
+    <button class="btn green" onclick="setRation()">Valider</button>
+  </div>
+
+</div>
+
+<!-- ================= PARAMÈTRES ================= -->
+<div id="settingsPanel" class="hidden">
+
+  <div class="tabs">
+    <div id="subPlan" class="tab active" onclick="showSub('plan')">📅 Planning</div>
+    <div id="subLamp" class="tab" onclick="showSub('lamp')">💡Tempo Lampe</div>
+    <div id="subMail" class="tab" onclick="showSub('mail')">💌 Email</div>
+    <div id="subWifi" class="tab" onclick="showSub('wifi')">📡 WiFi</div>
+    <div id="subMaint" class="tab" onclick="showSub('maint')">🛠 Maintenance</div>
+  </div>
+
+  <!-- ===== PLANNING ===== -->
+  <div id="panelPlan" class="card">
+    <div class="label">Planning automatique</div>
+    <button class="btn orange" onclick="addProg()">+ Ajouter programme</button>
+    <div id="progList"></div>
+  </div>
+
+  <!-- ===== WIFI ===== -->
+  <div id="panelWifi" class="card hidden">
+    <button class="btn red" onclick="resetWifi()">Reset WiFi</button>
+    <div class="small" id="wifiNote"></div>
+  </div>
+
+ <!-- ===== MAIL ===== -->
+<div id="panelMail" class="card hidden">
+
+  <input id="sender" placeholder="Email envoi">
+  <input id="password" placeholder="Mot de passe">
+  <input id="recipient" placeholder="Email réception">
+
+  <div class="label" style="margin-top:15px">
+    Seuil d’alerte réserve
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+    <input id="threshold" type="number"
+           inputmode="numeric"
+           min="0"
+           placeholder="Seuil alerte"
+           style="width:110px;text-align:center">
+    <div class="small">grammes</div>
+  </div>
+
+  <button class="btn gold" style="margin-top:15px" onclick="saveMail()">
+    Sauvegarder
+  </button>
+
+  <button class="btn gold" style="margin-top:8px" onclick="mailTest()">
+    Test mail
+  </button>
+
+</div>
+
+  <!-- ===== LAMPE ===== -->
+  <div id="panelLamp" class="card hidden">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <input id="lampMinutes" type="number" placeholder="Durée" style="width:70px"
+        onfocus="lampEditing=true" onblur="lampEditing=false">
+      <div class="small">minutes</div>
+    </div>
+
+    <button class="btn gold" onclick="saveLampDur()">Sauvegarder</button>
+  </div>
+
+  <!-- ===== MAINTENANCE ===== -->
+  <div id="panelMaint" class="card hidden">
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+
+      <button class="btn" style="background:#ff7a00;color:white" onclick="cmd('vid')">
+        <span id="vidDot" class="dot"></span>🧹 Vidange
+      </button>
+
+      <button class="btn red" onclick="cmd('stop')">⛔ STOP</button>
+
+      <button class="btn blue" onclick="tare()">⚖️ TARE</button>
+
+      <button class="btn gray" onclick="showTab('home')">Retour</button>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== EDIT PLANNING ===== -->
+<div id="editor" class="hidden" onclick="closeEdit()" style="
+position:fixed;
+top:0;left:0;right:0;bottom:0;
+background:#000a;
+align-items:center;
+justify-content:center;
+z-index:99;
+">
+  <div class="card" onclick="event.stopPropagation()" style="width:90%;max-width:380px">
+
+    <div class="label">Heure</div>
+    <div style="display:flex;gap:10px">
+      <input id="editT" type="time">
+    </div>
+
+    <div class="label">Jours</div>
+    <div id="dayBtns" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px"></div>
+
+    <button class="btn green" onclick="saveEdit()">Sauver</button>
+    <button class="btn gray" onclick="closeEdit()">Annuler</button>
+
+  </div>
+</div>
+
+<!-- ===== HISTORY OVERLAY (utile en extérieur) ===== -->
+<div id="historyPanel" class="hidden" style="
+position:fixed;
+top:0;left:0;right:0;bottom:0;
+background:#000c;
+overflow:auto;
+z-index:999;
+padding:10px;
+">
+  <div class="card">
+    <div class="value">📜 Historique</div>
+    <div id="historyList"></div>
+
+    <button class="btn red" onclick="clearHistory()">Effacer</button>
+    <button class="btn gray" onclick="hideHistory()">Fermer</button>
+  </div>
+</div>
+
+<script>
+/* ===========================
+   MODE AUTO : LOCAL (ESP) ou EXTERIEUR (GitHub)
+   =========================== */
+
+const params = new URLSearchParams(window.location.search);
+const deviceID = params.get("id");
+const pairCode = params.get("key");
+  if(!deviceID || !pairCode){
+  alert("Lien invalide : appareil non défini.");
+}
+
+// Détection robuste: si on ouvre depuis l’ESP (IP locale ou .local), on force HTTP
+const host = location.hostname || "";
+const LOCAL_MODE =
+  host === "localhost" ||
+  host.endsWith(".local") ||
+  /^(\d{1,3}\.){3}\d{1,3}$/.test(host); // IP
+
+let mqttReady = false;
+let mqttClient = null;
+let lastStatus = null;
+let offline = false;
+let lastStatusTime = 0;  
+
+let lampEditing = false;
+let scheduleEditing = false;
+let editor = null;
+
+let lastScheduleString = ""; // pour éviter reload en boucle
+let schedule = [];
+let editIndex = -1;
+
+window.onload = () => {
+  editor = document.getElementById("editor");
+  
+    // Demande permission notifications (si supporté)
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission().then(p => {
+      console.log("Notification permission:", p);
+    });
+  }
+
+  // Info dans WiFi tab
+  const wifiNote = document.getElementById("wifiNote");
+  if(!LOCAL_MODE){
+    wifiNote.innerText = "⚠️ Reset WiFi dispo uniquement en mode local (page servie par l'ESP).";
+  } else {
+    wifiNote.innerText = "";
+  }
+
+  // Si extérieur -> charge MQTT dynamiquement (pas de dépendance internet en local)
+  if(!LOCAL_MODE){
+    loadMqttLibAndConnect();
+  }
+  if(!LOCAL_MODE){
+  setOffline(true);
+}
+};
+
+/* ===========================
+   UI TABS
+   =========================== */
+function showTab(t){
+  document.getElementById('homePanel').classList.toggle('hidden',t!=='home');
+  document.getElementById('settingsPanel').classList.toggle('hidden',t!=='settings');
+  tabHome.classList.toggle('active',t==='home');
+  tabSettings.classList.toggle('active',t==='settings');
+}
+
+function showSub(s){
+  ['plan','wifi','mail','lamp','maint'].forEach(x=>{
+    document.getElementById('panel'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('hidden',x!==s);
+    document.getElementById('sub'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active',x===s);
+  });
+}
+
+/* ===========================
+   COMMS CORE (HTTP en local / MQTT en extérieur)
+   =========================== */
+function httpCall(path){
+  return fetch(path).catch(()=>null);
+}
+
+function mqttSend(cmd){
+  if(!mqttReady || !mqttClient) return;
+  mqttClient.publish("crok/"+deviceID+"/"+pairCode+"/cmd", cmd);
+}
+
+function cmd(c){
+  if(LOCAL_MODE){
+    httpCall('/api/'+c);
+  } else {
+    mqttSend(c);
+  }
+}
+
+function toggleLamp(){ cmd('lamp'); }
+function toggleAuto(){ cmd('auto'); }
+
+function tare(){
+  if(LOCAL_MODE) httpCall('/api/tare');
+  else mqttSend('tare');
+}
+
+function setRation(){
+  const input = document.getElementById("setg");
+  const g = parseFloat(input.value);
+  if(isNaN(g) || g <= 0) return;
+
+  if(LOCAL_MODE) httpCall('/api/set?g='+encodeURIComponent(g));
+  else mqttSend('set:'+g);
+
+  // comme demandé : on vide la case après validation
+  input.value = "";
+  input.blur();
+}
+
+function saveLampDur(){
+  const m = parseInt(document.getElementById("lampMinutes").value || "0", 10);
+  if(!m) return;
+
+  if(LOCAL_MODE) httpCall('/api/lampdur?m='+encodeURIComponent(m));
+  else mqttSend('lampdur:'+m);
+}
+
+function saveMail(){
+
+  const payload =
+    (sender.value||"") + "|" +
+    (password.value||"") + "|" +
+    (recipient.value||"") + "|" +
+    (threshold.value||"");
+
+  if(LOCAL_MODE){
+    const s = encodeURIComponent(sender.value||"");
+    const p = encodeURIComponent(password.value||"");
+    const r = encodeURIComponent(recipient.value||"");
+    const t = encodeURIComponent(threshold.value||"");
+    httpCall(`/api/setmail?s=${s}&p=${p}&r=${r}&t=${t}`);
+  } else {
+    mqttSend("setmail:" + payload);
+    alert("Configuration mail envoyée.");
+  }
+}
+
+
+function mailTest(){
+  if(LOCAL_MODE) httpCall('/api/mailtest');
+  else mqttSend('mailtest');
+}
+
+function resetWifi(){
+  if(!LOCAL_MODE){
+    alert("Reset WiFi dispo uniquement en mode local (page ESP).");
+    return;
+  }
+  httpCall('/api/resetwifi');
+}
+
+/* ===========================
+   HISTORIQUE
+   =========================== */
+function showHistory(){
+  if(LOCAL_MODE){
+    // identique ESP : vraie page historique
+    window.location = "/history";
+  } else {
+    // extérieur : overlay + mqtt gethistory
+    document.getElementById("historyPanel").classList.remove("hidden");
+    mqttSend("gethistory");
+  }
+}
+function hideHistory(){
+  document.getElementById("historyPanel").classList.add("hidden");
+}
+function clearHistory(){
+  if(LOCAL_MODE) httpCall('/api/clearhistory');
+  else mqttSend('clearhistory');
+}
+function displayHistoryFromMqtt(data){
+  const box = document.getElementById("historyList");
+  if(!data){ box.innerHTML=""; return; }
+
+  const items = data.split(",");
+  let html = "";
+
+  items.forEach(item=>{
+    const parts = item.split("|");
+    if(parts.length === 2){
+      const ts = parseInt(parts[0], 10);
+      const w = parts[1];
+      if(!ts) return;
+      const d = new Date(ts*1000);
+      html += `<div class="card">${d.toLocaleString()} — ${w} g</div>`;
+    }
+  });
+
+  box.innerHTML = html || "<div class='small'>Aucun historique.</div>";
+}
+
+/* ===========================
+   PLANNING (identique ESP)
+   =========================== */
+function loadSchedule(str){
+  schedule = [];
+  if(!str) { renderSchedule(); return; }
+
+  str.split(",").forEach(x=>{
+    const t = x.split("|");
+    if(t.length === 2) schedule.push({time:t[0], mask:t[1]});
+  });
+
+  renderSchedule();
+}
+
+function renderSchedule(){
+  const progList = document.getElementById("progList");
+  progList.innerHTML = "";
+
+  schedule.forEach((p,i)=>{
+    const days=["L","M","M","J","V","S","D"];
+    const mask=parseInt(p.mask)||0;
+
+    let d="";
+    for(let k=0;k<7;k++) if(mask&(1<<k)) d+=days[k]+" ";
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.onclick = ()=>editProg(i);
+
+    const line = document.createElement("div");
+    line.innerText = `${p.time} — ${d}`;
+
+    const btn = document.createElement("button");
+    btn.className = "btn red";
+    btn.innerText = "Supprimer";
+    btn.onclick = (e)=>{ e.stopPropagation(); delProg(i); };
+
+    card.appendChild(line);
+    card.appendChild(btn);
+    progList.appendChild(card);
+  });
+}
+
+function addProg(){
+  schedule.push({time:"07:00",mask:127});
+  sendSchedule();
+}
+
+function delProg(i){
+  schedule.splice(i,1);
+  sendSchedule();
+}
+
+function sendSchedule(){
+  const s = schedule.map(p=>p.time+"|"+p.mask).join(",");
+  if(LOCAL_MODE) httpCall('/api/schedule?data='+encodeURIComponent(s));
+  else mqttSend('schedule:'+s);
+}
+
+function editProg(i){
+  editIndex=i;
+  const p=schedule[i];
+  editT.value = p.time;
+
+  buildDays(parseInt(p.mask));
+  scheduleEditing = true;
+  editor.classList.remove("hidden");
+  editor.classList.add("show");
+}
+
+function closeEdit(){
+  scheduleEditing = false;
+  editor.classList.remove("show");
+  editor.classList.add("hidden");
+}
+
+function buildDays(mask){
+  dayBtns.innerHTML="";
+  const names=["L","M","M","J","V","S","D"];
+
+  for(let i=0;i<7;i++){
+    const on = (mask&(1<<i));
+    dayBtns.innerHTML += `
+      <button class="btn ${on?'green':'gray'}"
+        onclick="event.stopPropagation();toggleDay(${i})"
+        id="d${i}">
+        ${names[i]}
+      </button>`;
+  }
+}
+
+function toggleDay(i){
+  const b=document.getElementById("d"+i);
+  b.classList.toggle("green");
+  b.classList.toggle("gray");
+}
+
+function saveEdit(){
+  let mask=0;
+  for(let i=0;i<7;i++){
+    if(document.getElementById("d"+i).classList.contains("green")) mask|=(1<<i);
+  }
+
+  const time = editT.value || "00:00";
+  schedule[editIndex] = { time, mask };
+  sendSchedule();
+  scheduleEditing = false;
+  closeEdit();
+}
+  
+/* ===========================
+   STATUS UPDATE
+   =========================== */
+function updateUI(j){
+  if(!j) return;
+  lastStatusTime = Date.now();
+  setOffline(false);
+
+  document.getElementById('status').innerText = j.state ?? "---";
+  document.getElementById('weight').innerText = (j.weight!=null) ? Number(j.weight).toFixed(1) : "0";
+  document.getElementById('target').innerText = (j.target!=null) ? Number(j.target).toFixed(1) : "0";
+
+  // lampe
+  const lampDot=document.getElementById('lampDot');
+  lampDot.classList.toggle('on', j.lamp==="ON");
+
+  // auto
+  const autoDot=document.getElementById('autoDot');
+  autoDot.style.background = (j.auto==="ON") ? "#2DF006" : "#c0392b";
+
+  // vidange
+  const vidDot=document.getElementById('vidDot');
+  if(vidDot) vidDot.classList.toggle('on', j.vid==="ON");
+
+  // lamp duration affichage (si on n'édite pas)
+  if(!lampEditing && j.lampMin!=null){
+    const lm = document.getElementById("lampMinutes");
+    if(lm && document.activeElement !== lm) lm.value = j.lampMin;
+  }
+
+  // planning : ne reload que si la string change
+  if(!scheduleEditing && !editor.classList.contains("show")){
+    const s = j.schedule || "";
+    if(s !== lastScheduleString){
+      lastScheduleString = s;
+      loadSchedule(s);
+    }
+  }
+}
+
+// Local mode: poll /api/status
+setInterval(()=>{
+  if(LOCAL_MODE){
+    httpCall('/api/status')
+      .then(r=> r ? r.json() : null)
+      .then(j=>{ if(j) updateUI(j); })
+      .catch(()=>{});
+  } else {
+    // extérieur : on réaffiche ce qu'on a reçu MQTT
+    if(lastStatus) updateUI(lastStatus);
+    if(lastStatusTime && (Date.now() - lastStatusTime > 6000)) setOffline(true);
+  }
+}, 1000);
+  
+function setOffline(state){
+  if(state === offline) return;
+  offline = state;
+
+  const banner = document.getElementById("offlineBanner");
+  if(banner) banner.style.display = state ? "block" : "none";
+
+  document.querySelectorAll(".btn").forEach(b=>{
+    b.disabled = state;
+    b.style.opacity = state ? 0.5 : 1;
+  });
+}
+/* ===========================
+   MQTT (extérieur uniquement)
+   =========================== */
+function loadMqttLibAndConnect(){
+  const s = document.createElement("script");
+  s.src = "https://unpkg.com/mqtt/dist/mqtt.min.js";
+  s.onload = connectMqtt;
+  s.onerror = ()=>console.log("MQTT lib load failed");
+  document.head.appendChild(s);
+}
+
+function showNotification(msg){
+  if (!("Notification" in window)) return;
+
+  if (Notification.permission === "granted") {
+    new Notification("🐾 CrokAuto", {
+      body: msg,
+      icon: "icon.png"
+    });
+  } else {
+    console.log("Notif non autorisée:", msg);
+  }
+}
+  
+function connectMqtt(){
+  try{
+    mqttClient = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
+    mqttClient.on("reconnect", ()=> console.log("MQTT reconnect..."));
+    mqttClient.on("close", ()=> console.log("MQTT closed"));
+    mqttClient.on("error", (e)=> console.log("MQTT error", e));
+  } catch(e){
+    console.log("MQTT connect error", e);
+    return;
+  }
+
+  mqttClient.on("connect", ()=>{
+    mqttReady = true;
+    mqttClient.subscribe("crok/" + deviceID + "/" + pairCode + "/status");
+    mqttClient.subscribe("crok/" + deviceID + "/" + pairCode + "/history");
+    mqttClient.subscribe("crok/" + deviceID + "/" + pairCode + "/alert");
+    console.log("MQTT connecté (extérieur)");
+    // on demande l'historique au démarrage si panel ouvert plus tard
+  });
+
+  mqttClient.on("message", (topic, payload)=>{
+    if(topic.endsWith("/status")){
+      try{ lastStatus = JSON.parse(payload.toString()); } catch(e){}
+    }
+    if(topic.endsWith("/history")){
+      displayHistoryFromMqtt(payload.toString());
+    }
+    if (topic.endsWith("/alert")) {
+    const msg = payload.toString();
+    console.log("ALERT:", msg);
+    showNotification(msg);
+    }
+  });
+}
+</script>
+
+</div>
+</body>
+</html>
